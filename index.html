@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 我的持仓分析看板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card-hover: #222639;
+    --border: #2a2e3a;
+    --text: #e8eaed;
+    --text-secondary: #9aa0ab;
+    --accent: #4f8cff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --purple: #8b5cf6;
+    --teal: #14b8a6;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px; flex-wrap: wrap; gap: 16px;
+  }
+  .header h1 {
+    font-size: 28px; font-weight: 700;
+    background: linear-gradient(135deg, #4f8cff, #8b5cf6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-right {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .update-badge {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 100px;
+    font-size: 13px; color: var(--text-secondary);
+  }
+  .update-badge span { color: var(--accent); font-weight: 600; }
+
+  /* Summary Cards */
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .summary-card {
+    background: var(--card); border-radius: var(--radius); padding: 20px;
+    border: 1px solid var(--border); transition: all .2s;
+  }
+  .summary-card:hover { border-color: var(--accent); }
+  .summary-card .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .summary-card .value { font-size: 24px; font-weight: 700; }
+  .summary-card .sub { font-size: 14px; margin-top: 4px; }
+  .text-green { color: var(--green); }
+  .text-red { color: var(--red); }
+  .text-accent { color: var(--accent); }
+  .text-orange { color: var(--orange); }
+
+  /* Section Title */
+  .section-title {
+    font-size: 18px; font-weight: 600; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title .count {
+    font-size: 13px; font-weight: 400; color: var(--text-secondary);
+    background: var(--card); padding: 2px 10px; border-radius: 100px;
+  }
+
+  /* Stock Grid */
+  .stock-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  @media (max-width: 500px) {
+    .stock-grid { grid-template-columns: 1fr; }
+  }
+
+  .stock-card {
+    background: var(--card); border-radius: var(--radius); padding: 20px;
+    border: 1px solid var(--border); transition: all .2s;
+    position: relative; overflow: hidden;
+  }
+  .stock-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .stock-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stock-card.up::before { background: var(--green); }
+  .stock-card.down::before { background: var(--red); }
+  .stock-card.neutral::before { background: var(--text-secondary); }
+
+  .stock-header {
+    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;
+  }
+  .stock-name {
+    font-size: 17px; font-weight: 600;
+  }
+  .stock-code {
+    font-size: 12px; color: var(--text-secondary); font-weight: 400; margin-left: 8px;
+  }
+  .stock-status {
+    font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 100px;
+  }
+  .stock-status.up { background: rgba(34,197,94,0.15); color: var(--green); }
+  .stock-status.down { background: rgba(239,68,68,0.15); color: var(--red); }
+  .stock-status.neutral { background: rgba(154,160,171,0.15); color: var(--text-secondary); }
+
+  .stock-price-row {
+    display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
+  }
+  .stock-price { font-size: 28px; font-weight: 700; }
+  .stock-change { font-size: 15px; font-weight: 500; }
+
+  .stock-details {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
+  }
+  .stock-detail-item {
+    display: flex; justify-content: space-between; font-size: 13px;
+    padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .stock-detail-item .lbl { color: var(--text-secondary); }
+  .stock-detail-item .val { font-weight: 500; }
+
+  .stock-analysis {
+    margin-top: 12px; padding: 12px; border-radius: 12px;
+    background: rgba(255,255,255,0.03); font-size: 13px; line-height: 1.6;
+    color: var(--text-secondary);
+  }
+  .stock-analysis strong { color: var(--text); }
+  .tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px;
+    border-radius: 100px; margin-right: 4px; font-weight: 500;
+  }
+  .tag-green { background: rgba(34,197,94,0.12); color: var(--green); }
+  .tag-red { background: rgba(239,68,68,0.12); color: var(--red); }
+  .tag-orange { background: rgba(245,158,11,0.12); color: var(--orange); }
+  .tag-purple { background: rgba(139,92,246,0.12); color: var(--purple); }
+
+  /* Alert Rules */
+  .alert-section {
+    background: var(--card); border-radius: var(--radius); padding: 24px;
+    border: 1px solid var(--border); margin-bottom: 32px;
+  }
+  .alert-rules {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px; margin-top: 16px;
+  }
+  .alert-rule {
+    background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px;
+    border: 1px solid var(--border);
+  }
+  .alert-rule .rule-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  }
+  .alert-rule .rule-header .icon { font-size: 18px; }
+  .alert-rule .rule-header .title { font-weight: 600; font-size: 14px; }
+  .alert-rule .rule-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .alert-rule .rule-status {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 100px;
+    background: rgba(34,197,94,0.12); color: var(--green); margin-top: 8px;
+  }
+
+  /* Price Alert Table */
+  .alert-table-wrap {
+    overflow-x: auto; margin-top: 16px;
+  }
+  .alert-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .alert-table th {
+    text-align: left; padding: 10px 12px; color: var(--text-secondary);
+    font-weight: 500; border-bottom: 1px solid var(--border);
+  }
+  .alert-table td {
+    padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .alert-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* Footer */
+  .footer {
+    text-align: center; padding: 32px 0; font-size: 13px; color: var(--text-secondary);
+    border-top: 1px solid var(--border); margin-top: 32px;
+  }
+
+  /* Mini Charts */
+  .mini-bar {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .mini-bar-track {
+    flex: 1; height: 6px; background: rgba(255,255,255,0.06);
+    border-radius: 100px; overflow: hidden;
+  }
+  .mini-bar-fill {
+    height: 100%; border-radius: 100px; transition: width .5s;
+  }
+  .bar-green { background: var(--green); }
+  .bar-red { background: var(--red); }
+  .bar-accent { background: var(--accent); }
+
+  /* Data last updated info */
+  .data-entry-hint {
+    background: rgba(79,140,255,0.08); border: 1px dashed var(--accent);
+    border-radius: 12px; padding: 16px; margin-bottom: 24px;
+    font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+  }
+  .data-entry-hint strong { color: var(--accent); }
+
+  /* Volume Analysis */
+  .volume-card {
+    background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px;
+    border: 1px solid var(--border); margin-bottom: 12px;
+  }
+  .volume-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+  }
+  .volume-header .stock-tag { font-weight: 600; font-size: 14px; }
+  .volume-bar-wrap {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  }
+  .volume-bar-track {
+    flex: 1; height: 8px; background: rgba(255,255,255,0.06);
+    border-radius: 100px; overflow: hidden; position: relative;
+  }
+  .volume-bar-fill {
+    height: 100%; border-radius: 100px; transition: width .5s;
+  }
+  .vol-bar-green { background: linear-gradient(90deg, var(--green), #4ade80); }
+  .vol-bar-red { background: linear-gradient(90deg, var(--red), #f87171); }
+  .vol-bar-orange { background: linear-gradient(90deg, var(--orange), #fbbf24); }
+  .vol-bar-purple { background: linear-gradient(90deg, var(--purple), #a78bfa); }
+  .vol-bar-gray { background: var(--text-secondary); }
+
+  .volume-meta {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px;
+  }
+  .volume-meta-item {
+    font-size: 12px; text-align: center; padding: 6px; border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+  }
+  .volume-meta-item .vm-label { color: var(--text-secondary); margin-bottom: 2px; }
+  .volume-meta-item .vm-value { font-weight: 600; font-size: 14px; }
+
+  /* Signal Cards */
+  .signal-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px; margin-top: 16px;
+  }
+  .signal-card {
+    border-radius: 12px; padding: 16px; position: relative; overflow: hidden;
+  }
+  .signal-card.buy {
+    background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(34,197,94,0.04));
+    border: 1px solid rgba(34,197,94,0.25);
+  }
+  .signal-card.sell {
+    background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04));
+    border: 1px solid rgba(239,68,68,0.25);
+  }
+  .signal-card.hold {
+    background: linear-gradient(135deg, rgba(79,140,255,0.12), rgba(79,140,255,0.04));
+    border: 1px solid rgba(79,140,255,0.25);
+  }
+  .signal-card.watch {
+    background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04));
+    border: 1px solid rgba(245,158,11,0.25);
+  }
+  .signal-card .signal-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .signal-card .signal-icon { font-size: 20px; }
+  .signal-card .signal-title { font-weight: 600; font-size: 15px; }
+  .signal-card .signal-action {
+    font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 100px;
+    margin-left: auto;
+  }
+  .signal-card.buy .signal-action { background: rgba(34,197,94,0.2); color: var(--green); }
+  .signal-card.sell .signal-action { background: rgba(239,68,68,0.2); color: var(--red); }
+  .signal-card.hold .signal-action { background: rgba(79,140,255,0.2); color: var(--accent); }
+  .signal-card.watch .signal-action { background: rgba(245,158,11,0.2); color: var(--orange); }
+  .signal-card .signal-reason {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+  }
+  .signal-card .signal-price {
+    margin-top: 8px; font-size: 13px;
+  }
+  .signal-card .signal-price .suggest {
+    display: inline-block; background: rgba(255,255,255,0.06); padding: 4px 10px;
+    border-radius: 8px; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>📊 我的持仓分析看板</h1>
+    <div class="header-right">
+      <div class="update-badge">📅 更新于 <span id="updateDate">2026-06-12 15:30</span></div>
+    </div>
+  </div>
+
+  <!-- Data Entry Hint -->
+  <div class="data-entry-hint">
+    💡 <strong>每日更新方式：</strong>每天早上开盘前或收盘后，修改下方 <code>portfolioData</code> 中的价格、盈亏数据和成交量数据即可刷新看板。量比（volumeRatio）会自动计算买卖信号，换手率和日均成交量也会影响到建议逻辑。建议每天收盘后更新一次。
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="label">总资产</div>
+      <div class="value text-accent" id="totalAssets">273,232</div>
+      <div class="sub text-secondary">元</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">证券市值</div>
+      <div class="value">271,994</div>
+      <div class="sub text-secondary">元</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">可用资金</div>
+      <div class="value">1,239</div>
+      <div class="sub text-secondary">元</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">今日盈亏</div>
+      <div class="value text-green" id="dailyPL">+458</div>
+      <div class="sub text-green">+0.17%</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">累计盈亏</div>
+      <div class="value text-red" id="totalPL">-65,709</div>
+      <div class="sub text-red">-19.4%</div>
+    </div>
+  </div>
+
+  <!-- Alert Rules -->
+  <div class="alert-section">
+    <div class="section-title">🔔 盯盘预警规则 <span class="count">已启用</span></div>
+    <div class="alert-rules">
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">⏰</span>
+          <span class="title">开盘播报</span>
+        </div>
+        <div class="rule-desc">每个交易日 09:25 发送早盘简报，包含各股昨收、今日关键价位</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">📊</span>
+          <span class="title">午盘速递（含量能监测）</span>
+        </div>
+        <div class="rule-desc">每个交易日 11:35 发送午盘总结，统计半日涨跌幅、量比分析、量价配合判断和建议</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">🌙</span>
+          <span class="title">收盘总结（含量能监测）</span>
+        </div>
+        <div class="rule-desc">每个交易日 15:05 发送收盘报告，含量价分析、买卖点建议（含建议价格和股数）</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">📈</span>
+          <span class="title">涨跌幅预警</span>
+        </div>
+        <div class="rule-desc">单只股票日内涨跌幅超过 ±5% 时实时预警，附分析建议</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">🎯</span>
+          <span class="title">价格触碰预警</span>
+        </div>
+        <div class="rule-desc">当股价触碰预设的买入/卖出目标价时立即提醒</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">💡</span>
+          <span class="title">买卖点建议</span>
+        </div>
+        <div class="rule-desc">基于技术面和基本面综合判断，给出买入/卖出/持有建议</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">📈</span>
+          <span class="title">量能异动监测</span>
+        </div>
+        <div class="rule-desc">实时量比 >1.5 预警放量，>2.0 预警显著放量，>3.0 异常天量警报。配合涨跌方向给出买卖信号</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+      <div class="alert-rule">
+        <div class="rule-header">
+          <span class="icon">🎯</span>
+          <span class="title">量价买卖信号</span>
+        </div>
+        <div class="rule-desc">放量上涨→买入、放量下跌→减仓、缩量支撑→试探买入、异常天量→减仓观望、止损线→强制止损</div>
+        <div class="rule-status">✅ 已配置 · 微信推送</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Price Alert Targets -->
+  <div class="alert-section">
+    <div class="section-title">🎯 各股价格预警目标 <span class="count">可调整</span></div>
+    <div class="alert-table-wrap">
+      <table class="alert-table">
+        <thead>
+          <tr>
+            <th>股票</th>
+            <th>持仓成本</th>
+            <th>现价</th>
+            <th>买入目标</th>
+            <th>减仓目标</th>
+            <th>止损目标</th>
+            <th>目前建议</th>
+          </tr>
+        </thead>
+        <tbody id="alertTargets"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Stock List -->
+  <div class="section-title">📋 持仓详情 <span class="count" id="stockCount">6 只</span></div>
+  <div class="stock-grid" id="stockGrid"></div>
+
+  <!-- Analysis Summary -->
+  <div class="alert-section">
+    <div class="section-title">📝 综合管理建议</div>
+    <div style="font-size:14px;line-height:1.8;color:var(--text-secondary);margin-top:12px;" id="summaryAnalysis">
+      <p><strong style="color:var(--text);">仓位结构：</strong>舒华体育（39.7%）和科大讯飞（20.8%）占比过高，合计超过60%，集中度风险较大。</p>
+      <p><strong style="color:var(--text);">优先关注：</strong></p>
+      <p>① <span class="tag tag-red">科大讯飞</span> 浮亏38%最严重，回本需涨62%。关注6月星火大模型发布会能否带来催化。</p>
+      <p>② <span class="tag tag-orange">舒华体育</span> 占比近40%，Q1业绩翻倍但波动剧烈，建议适当减仓降低集中度。</p>
+      <p>③ <span class="tag tag-green">马应龙</span> <span class="tag tag-green">比亚迪</span> 基本面稳健，浮亏均在6%以内，耐心持有等待回本。</p>
+      <p>④ <span class="tag tag-purple">利欧股份</span> 关注H股上市进展，毛利率仅6.8%偏低。</p>
+      <p>⑤ <span class="tag tag-orange">普路通</span> 董事长辞职+监管函，并购重组是看点，谨慎观察。</p>
+    </div>
+  </div>
+
+  <!-- Volume & Buying/Selling Signals -->
+  <div class="alert-section">
+    <div class="section-title">📊 量能监测 & 买卖信号 <span class="count">实时分析</span></div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+      量比 = 当日成交量 / 近5日日均成交量。量比 &gt; 1.5 为放量，&gt; 2.0 为显著放量，&gt; 3.0 为异常天量。
+    </p>
+    <div id="volumeContainer"></div>
+  </div>
+
+  <!-- Buy/Sell Signals -->
+  <div class="alert-section">
+    <div class="section-title">🎯 买卖点信号 <span class="count">量价综合分析</span></div>
+    <div id="signalContainer"></div>
+  </div>
+
+  <div class="footer">
+    数据仅供参考，不构成投资建议 · 每日更新<br>
+    推送渠道：微信（需完成设置页扫码授权）
+  </div>
+</div>
+
+<script>
+// ============================================
+// 📦 每日数据更新区 —— 修改这里即可刷新页面
+// ============================================
+const portfolioData = {
+  updateDate: '2026-06-15 15:05',
+  totalAssets: 275091,
+  marketValue: 273852,
+  cash: 1239,
+  dailyPL: 1858,
+  dailyPLPercent: 0.68,
+  totalPL: -63816,
+  totalPLPercent: -18.9,
+  stocks: [
+    {
+      code: '600993', name: '马应龙', market: '沪市',
+      shares: 1000, price: 23.57, cost: 24.6,
+      changePercent: -1.09,
+      open: 23.74, high: 23.87, low: 23.35,
+      pe: 17.21, turnover: 1.3,
+      pl: -1030, plPercent: -4.19,
+      analysis: '中药消费龙头，基本面稳健。2025 年报净利 +10%，2026Q1+4.4%。负债率仅 16%，分红慷慨。今日量比 1.34，量价配合正常。',
+      suggestion: '持有',
+      alarmBuy: 23.0,
+      alarmReduce: 25.5,
+      alarmStop: 21.0,
+      sector: '医药',
+      tag: 'green',
+      volume: 55094,
+      avgVolume5d: 41000,
+      volumeRatio: 1.34,
+      support: 23.0,
+      resistance: 25.5,
+    },
+    {
+      code: '002769', name: '普路通', market: '深市',
+      shares: 2500, price: 7.41, cost: 8.83,
+      changePercent: -2.24,
+      open: 7.53, high: 7.73, low: 7.36,
+      pe: 484.61, turnover: 3.91,
+      pl: -3550, plPercent: -16.08,
+      analysis: '董事长辞职、业绩预告违规收监管函。正在推进并购重组，6/16 开股东大会。今日量比 1.21，正常震荡。',
+      suggestion: '观望',
+      alarmBuy: 7.0,
+      alarmReduce: 9.5,
+      alarmStop: 6.5,
+      sector: '供应链',
+      tag: 'orange',
+      volume: 145772,
+      avgVolume5d: 120000,
+      volumeRatio: 1.21,
+      support: 7.0,
+      resistance: 8.5,
+    },
+    {
+      code: '002131', name: '利欧股份', market: '深市',
+      shares: 5300, price: 5.38, cost: 6.53,
+      changePercent: 1.7,
+      open: 5.35, high: 5.46, low: 5.31,
+      pe: -846.83, turnover: 4.28,
+      pl: -6095, plPercent: -17.61,
+      analysis: 'Q1 营收 +7% 但净利 -71%，扣非亏损。毛利率仅 6.8% 偏低。H 股上市推进中。今日量比 1.14，小幅反弹。',
+      suggestion: '持有',
+      alarmBuy: 4.8,
+      alarmReduce: 7.0,
+      alarmStop: 4.5,
+      sector: '机械/数字营销',
+      tag: 'green',
+      volume: 2507782,
+      avgVolume5d: 2200000,
+      volumeRatio: 1.14,
+      support: 4.8,
+      resistance: 6.0,
+    },
+    {
+      code: '605299', name: '舒华体育', market: '沪市',
+      shares: 7100, price: 15.33, cost: 17.74,
+      changePercent: 0.79,
+      open: 15.0, high: 15.56, low: 14.96,
+      pe: 59.09, turnover: 3.0,
+      pl: -17111, plPercent: -13.59,
+      analysis: 'Q1 业绩爆发（净利 +213%），世界杯概念催化。仓位占比 40% 偏高。今日量比 0.61，缩量反弹。',
+      suggestion: '减仓',
+      alarmBuy: 14.0,
+      alarmReduce: 18.5,
+      alarmStop: 13.0,
+      sector: '体育健身',
+      tag: 'orange',
+      volume: 122153,
+      avgVolume5d: 200000,
+      volumeRatio: 0.61,
+      support: 14.0,
+      resistance: 17.5,
+    },
+    {
+      code: '002594', name: '比亚迪', market: '深市',
+      shares: 400, price: 90.82, cost: 97.14,
+      changePercent: -0.85,
+      open: 91.61, high: 91.9, low: 90.4,
+      pe: 30.06, turnover: 0.9,
+      pl: -2528, plPercent: -6.51,
+      analysis: '新能源龙头，出海加速。30 倍 PE 合理。今日量比 0.89，正常回调。',
+      suggestion: '持有',
+      alarmBuy: 85.0,
+      alarmReduce: 105.0,
+      alarmStop: 80.0,
+      sector: '新能源汽车',
+      tag: 'green',
+      volume: 312979,
+      avgVolume5d: 350000,
+      volumeRatio: 0.89,
+      support: 85.0,
+      resistance: 100.0,
+    },
+    {
+      code: '002230', name: '科大讯飞', market: '深市',
+      shares: 1400, price: 41.48, cost: 65.41,
+      changePercent: 2.7,
+      open: 41.01, high: 41.77, low: 41.01,
+      pe: 115.47, turnover: 2.25,
+      pl: -33502, plPercent: -36.58,
+      analysis: '最大亏损源，浮亏 3.4 万。收缩低毛利 G 端项目战略正确。今日量比 0.70，缩量上涨 +2.7%。',
+      suggestion: '观察',
+      alarmBuy: 35.0,
+      alarmReduce: 55.0,
+      alarmStop: 35.0,
+      sector: 'AI/人工智能',
+      tag: 'red',
+      volume: 493222,
+      avgVolume5d: 700000,
+      volumeRatio: 0.7,
+      support: 35.0,
+      resistance: 45.0,
+    }
+  ]
+};
+
+// ============================================
+// 渲染引擎
+// ============================================
+function render() {
+  const d = portfolioData;
+
+  // Update date
+  document.getElementById('updateDate').textContent = d.updateDate;
+
+  // Summary
+  document.getElementById('totalAssets').textContent = d.totalAssets.toLocaleString(undefined, {maximumFractionDigits:0});
+  document.getElementById('dailyPL').textContent = (d.dailyPL >= 0 ? '+' : '') + d.dailyPL.toLocaleString();
+  document.getElementById('totalPL').textContent = d.totalPL.toLocaleString();
+
+  // Stock count
+  document.getElementById('stockCount').textContent = d.stocks.length + ' 只';
+
+  // Stock cards
+  const grid = document.getElementById('stockGrid');
+  grid.innerHTML = '';
+  d.stocks.forEach(s => {
+    const isUp = s.changePercent >= 0;
+    const statusClass = isUp ? 'up' : 'down';
+    const statusText = isUp ? '🔴 +' + s.changePercent.toFixed(2) + '%' : '🟢 ' + s.changePercent.toFixed(2) + '%';
+    const plClass = s.pl >= 0 ? 'text-green' : 'text-red';
+
+    // Compute market value
+    const mktVal = s.shares * s.price;
+    const costVal = s.shares * s.cost;
+
+    // Tag color
+    let tagClass = 'tag-orange';
+    if (s.tag === 'green') tagClass = 'tag-green';
+    else if (s.tag === 'red') tagClass = 'tag-red';
+    else if (s.tag === 'purple') tagClass = 'tag-purple';
+
+    // 回本所需涨幅
+    const backToCost = ((s.cost - s.price) / s.price * 100).toFixed(1);
+
+    // 占组合比例
+    const pctOfPortfolio = (mktVal / d.marketValue * 100).toFixed(1);
+
+    const card = document.createElement('div');
+    card.className = `stock-card ${statusClass}`;
+    card.innerHTML = `
+      <div class="stock-header">
+        <div>
+          <span class="stock-name">${s.name}</span>
+          <span class="stock-code">${s.code} · ${s.market}</span>
+        </div>
+        <span class="stock-status ${statusClass}">${statusText}</span>
+      </div>
+      <div class="stock-price-row">
+        <span class="stock-price">${s.price.toFixed(2)}</span>
+        <span class="stock-change ${isUp ? 'text-green' : 'text-red'}">
+          ${isUp ? '+' : ''}${s.changePercent.toFixed(2)}%
+        </span>
+        <span class="tag ${tagClass}">${s.suggestion}</span>
+        <span style="font-size:12px;color:var(--text-secondary);margin-left:auto;">占比 ${pctOfPortfolio}%</span>
+      </div>
+      <div class="stock-details">
+        <div class="stock-detail-item"><span class="lbl">持仓</span><span class="val">${s.shares.toLocaleString()} 股</span></div>
+        <div class="stock-detail-item"><span class="lbl">市值</span><span class="val">${mktVal.toLocaleString()} 元</span></div>
+        <div class="stock-detail-item"><span class="lbl">成本价</span><span class="val">${s.cost.toFixed(2)} 元</span></div>
+        <div class="stock-detail-item"><span class="lbl">持仓盈亏</span><span class="val ${plClass}">${s.pl >= 0 ? '+' : ''}${s.pl.toLocaleString()} 元 (${s.plPercent.toFixed(2)}%)</span></div>
+        <div class="stock-detail-item"><span class="lbl">今开 / 高 / 低</span><span class="val">${s.open} / ${s.high} / ${s.low}</span></div>
+        <div class="stock-detail-item"><span class="lbl">市盈率(动)</span><span class="val">${s.pe.toFixed(2)}</span></div>
+        <div class="stock-detail-item"><span class="lbl">换手率</span><span class="val">${s.turnover}%</span></div>
+        <div class="stock-detail-item"><span class="lbl">回本需涨</span><span class="val text-orange">${backToCost}%</span></div>
+      </div>
+      <div class="stock-analysis">
+        <strong>📌 分析：</strong>${s.analysis}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Alert targets table
+  const tbody = document.getElementById('alertTargets');
+  tbody.innerHTML = '';
+  d.stocks.forEach(s => {
+    const isUp = s.changePercent >= 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${s.name}</strong> <span style="color:var(--text-secondary);font-size:12px;">${s.code}</span></td>
+      <td>${s.cost.toFixed(2)}</td>
+      <td class="${isUp ? 'text-green' : 'text-red'}">${s.price.toFixed(2)}</td>
+      <td class="text-green">≤ ${s.alarmBuy.toFixed(2)}</td>
+      <td class="text-orange">≥ ${s.alarmReduce.toFixed(2)}</td>
+      <td class="text-red">≤ ${s.alarmStop.toFixed(2)}</td>
+      <td><span class="tag ${s.tag === 'green' ? 'tag-green' : s.tag === 'red' ? 'tag-red' : 'tag-orange'}">${s.suggestion}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // ============================================
+  // Volume Analysis Engine
+  // ============================================
+  const volumeContainer = document.getElementById('volumeContainer');
+  volumeContainer.innerHTML = '';
+
+  d.stocks.forEach(s => {
+    const vr = s.volumeRatio;
+    let barClass = 'vol-bar-gray';
+    let level = '正常';
+    if (vr > 3.0) { barClass = 'vol-bar-red'; level = '🔴 异常天量'; }
+    else if (vr > 2.0) { barClass = 'vol-bar-orange'; level = '⚠️ 显著放量'; }
+    else if (vr > 1.5) { barClass = 'vol-bar-orange'; level = '⚡ 明显放量'; }
+    else if (vr < 0.5) { barClass = 'vol-bar-purple'; level = '💤 明显缩量'; }
+
+    const barWidth = Math.min(vr * 50, 100);
+    const isUp = s.changePercent >= 0;
+    const volBarClass = isUp ? 'vol-bar-green' : 'vol-bar-red';
+
+    // Price vs volume interpretation
+    let interpretation = '';
+    if (vr > 1.5 && s.changePercent > 2) interpretation = '放量上涨，趋势健康 ✅';
+    else if (vr > 1.5 && s.changePercent < -2) interpretation = '放量下跌，资金出逃 ⛔';
+    else if (vr < 0.7 && s.changePercent > 0) interpretation = '缩量上涨，动力不足 ⚠️';
+    else if (vr < 0.7 && s.changePercent < 0) interpretation = '缩量下跌，抛压减轻 💤';
+    else if (vr > 2.5) interpretation = '量能异常，密切关注 🔍';
+    else interpretation = '量价配合正常 ✓';
+
+    // 距买入目标位
+    const toBuyTarget = ((s.price - s.alarmBuy) / s.price * 100).toFixed(1);
+    // 距减仓目标位
+    const toReduceTarget = ((s.alarmReduce - s.price) / s.price * 100).toFixed(1);
+
+    const volCard = document.createElement('div');
+    volCard.className = 'volume-card';
+    volCard.innerHTML = `
+      <div class="volume-header">
+        <span class="stock-tag">${s.name} <span style="color:var(--text-secondary);font-weight:400;">${s.code}</span></span>
+        <span style="font-size:13px;font-weight:600;${vr > 1.5 ? 'color:var(--orange)' : vr > 2.0 ? 'color:var(--red)' : 'color:var(--text-secondary)'}">${level}</span>
+      </div>
+      <div class="volume-bar-wrap">
+        <span style="font-size:12px;color:var(--text-secondary);width:50px;">量比 ${vr.toFixed(2)}</span>
+        <div class="volume-bar-track">
+          <div class="volume-bar-fill ${barClass}" style="width:${barWidth}%"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text-secondary);width:30px;text-align:right;">${(vr * 100).toFixed(0)}%</span>
+      </div>
+      <div class="volume-meta">
+        <div class="volume-meta-item">
+          <div class="vm-label">成交量</div>
+          <div class="vm-value">${(s.volume / 10000).toFixed(1)}万手</div>
+        </div>
+        <div class="volume-meta-item">
+          <div class="vm-label">日均量</div>
+          <div class="vm-value">${(s.avgVolume5d / 10000).toFixed(1)}万手</div>
+        </div>
+        <div class="volume-meta-item">
+          <div class="vm-label">换手率</div>
+          <div class="vm-value">${s.turnover}%</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+        <strong>📌 量价解读：</strong>${interpretation}
+        <span style="margin-left:12px;">| 距买入目标位 <span class="text-green">-${toBuyTarget}%</span> 距减仓目标位 <span class="text-orange">+${toReduceTarget}%</span></span>
+      </div>
+    `;
+    volumeContainer.appendChild(volCard);
+  });
+
+  // ============================================
+  // Buy/Sell Signal Engine
+  // ============================================
+  const signalContainer = document.getElementById('signalContainer');
+  signalContainer.innerHTML = '';
+
+  function getSignal(s) {
+    const vr = s.volumeRatio;
+    const chg = s.changePercent;
+    const signals = [];
+
+    // --- BUY SIGNALS ---
+    // 1. 放量上涨 + 靠近支撑位 → 趋势确认买入
+    if (vr > 1.5 && chg > 2 && s.price <= s.support * 1.05) {
+      signals.push({
+        type: 'buy',
+        icon: '🟢',
+        title: '买入信号 · 放量突破支撑',
+        action: '买入',
+        reason: `放量上涨（量比${vr.toFixed(2)}），股价在支撑位${s.support}元附近，趋势确认，建议买入。`,
+        suggest: `建议价格 ≤ ${(s.support * 1.03).toFixed(2)} 元，买入 ${Math.floor(s.shares * 0.3)} 股（补仓30%）`
+      });
+    }
+
+    // 2. 放量突破压力位 → 突破有效加仓
+    if (vr > 1.5 && chg > 3 && s.price > s.resistance * 0.98) {
+      signals.push({
+        type: 'buy',
+        icon: '🚀',
+        title: '买入信号 · 放量突破压力位',
+        action: '买入',
+        reason: `放量（量比${vr.toFixed(2)}）突破压力位${s.resistance}元，突破有效，建议加仓。`,
+        suggest: `建议价格 ≤ ${(s.resistance * 1.02).toFixed(2)} 元，买入 ${Math.floor(s.shares * 0.2)} 股`
+      });
+    }
+
+    // 3. 缩量跌至支撑位 → 下跌衰竭试探买入
+    if (vr < 0.7 && chg < 0 && s.price <= s.support * 1.03) {
+      signals.push({
+        type: 'buy',
+        icon: '📉',
+        title: '买入信号 · 缩量跌至支撑',
+        action: '试探买入',
+        reason: `缩量（量比${vr.toFixed(2)}）跌至支撑位${s.support}元附近，下跌动能衰竭，可试探性买入。`,
+        suggest: `建议价格 ≤ ${s.support.toFixed(2)} 元，买入 ${Math.floor(s.shares * 0.15)} 股（轻仓试探）`
+      });
+    }
+
+    // --- SELL SIGNALS ---
+    // 4. 放量下跌 → 资金出逃减仓
+    if (vr > 1.5 && chg < -2) {
+      signals.push({
+        type: 'sell',
+        icon: '🔴',
+        title: '卖出信号 · 放量下跌',
+        action: '减仓',
+        reason: `放量下跌（量比${vr.toFixed(2)}，跌幅${chg.toFixed(1)}%），资金出逃迹象，建议减仓。`,
+        suggest: `建议价格 ≥ ${s.price.toFixed(2)} 元，卖出 ${Math.floor(s.shares * 0.3)} 股（减仓30%）`
+      });
+    }
+
+    // 5. 放量滞涨 → 出货减仓
+    if (vr > 1.5 && Math.abs(chg) < 0.5) {
+      signals.push({
+        type: 'sell',
+        icon: '⚠️',
+        title: '卖出信号 · 放量滞涨',
+        action: '减仓',
+        reason: `放量（量比${vr.toFixed(2)}）但涨幅仅${chg.toFixed(1)}%，出货迹象明显，建议减仓。`,
+        suggest: `建议价格 ≥ ${s.price.toFixed(2)} 元，卖出 ${Math.floor(s.shares * 0.25)} 股`
+      });
+    }
+
+    // 6. 缩量反弹至压力位 → 上涨乏力减仓
+    if (vr < 0.7 && chg > 0 && s.price >= s.resistance * 0.97) {
+      signals.push({
+        type: 'sell',
+        icon: '📈',
+        title: '卖出信号 · 缩量触及压力',
+        action: '减仓',
+        reason: `缩量（量比${vr.toFixed(2)}）反弹至压力位${s.resistance}元附近，上涨动力不足，建议减仓。`,
+        suggest: `建议价格 ≥ ${s.resistance.toFixed(2)} 元，卖出 ${Math.floor(s.shares * 0.2)} 股`
+      });
+    }
+
+    // 7. 异常天量 → 筹码剧烈交换，减仓观望
+    if (vr > 3.0) {
+      signals.push({
+        type: 'sell',
+        icon: '🚨',
+        title: '卖出信号 · 异常天量',
+        action: '减仓观望',
+        reason: `量比${vr.toFixed(2)}，异常天量，筹码剧烈交换，方向不确定，建议减仓观望。`,
+        suggest: `不论涨跌，建议卖出 ${Math.floor(s.shares * 0.3)} 股（减仓30%）`
+      });
+    }
+
+    // 8. 止损信号
+    if (s.price <= s.alarmStop) {
+      signals.push({
+        type: 'sell',
+        icon: '🛑',
+        title: '止损信号 · 触及止损线',
+        action: '立即止损',
+        reason: `股价${s.price.toFixed(2)}元已触及止损线${s.alarmStop}元，建议严格执行止损。`,
+        suggest: `立即卖出全部 ${s.shares} 股`
+      });
+    }
+
+    // 9. 减仓目标到达
+    if (s.price >= s.alarmReduce) {
+      signals.push({
+        type: 'sell',
+        icon: '💰',
+        title: '减仓信号 · 到达减仓目标',
+        action: '止盈',
+        reason: `股价${s.price.toFixed(2)}元已达减仓目标${s.alarmReduce}元，建议按计划减仓。`,
+        suggest: `建议卖出 ${Math.floor(s.shares * 0.4)} 股（减仓40%）`
+      });
+    }
+
+    // --- HOLD SIGNALS (default) ---
+    if (signals.length === 0) {
+      signals.push({
+        type: 'hold',
+        icon: '✅',
+        title: '持有信号 · 暂无异常',
+        action: '继续持有',
+        reason: `量价配合正常（量比${vr.toFixed(2)}，涨跌${chg.toFixed(1)}%），建议继续持有当前仓位，无紧急操作必要。`,
+        suggest: `维持 ${s.shares} 股不动`
+      });
+    }
+
+    return signals;
+  }
+
+  d.stocks.forEach(s => {
+    const signals = getSignal(s);
+    const isUp = s.changePercent >= 0;
+
+    const signalSection = document.createElement('div');
+    signalSection.style.marginBottom = '20px';
+
+    const headerHtml = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-weight:600;font-size:15px;">${s.name}</span>
+        <span style="font-size:13px;color:var(--text-secondary);">${s.code}</span>
+        <span style="font-size:13px;font-weight:600;${isUp ? 'color:var(--green)' : 'color:var(--red)'};margin-left:auto;">${s.price.toFixed(2)} ${isUp ? '+' : ''}${s.changePercent.toFixed(2)}%</span>
+      </div>
+    `;
+
+    const signalCards = signals.map(sig => {
+      const typeClass = sig.type;
+      const actionClass = sig.type === 'buy' ? '买入' : sig.type === 'sell' ? '卖出' : '持有';
+      return `
+        <div class="signal-card ${typeClass}">
+          <div class="signal-header">
+            <span class="signal-icon">${sig.icon}</span>
+            <span class="signal-title">${sig.title}</span>
+            <span class="signal-action">${sig.action}</span>
+          </div>
+          <div class="signal-reason">${sig.reason}</div>
+          <div class="signal-price">
+            <span class="suggest">💡 ${sig.suggest}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    signalSection.innerHTML = headerHtml + `<div class="signal-grid">${signalCards}</div>`;
+    signalContainer.appendChild(signalSection);
+  });
+}
+
+render();
+</script>
+</body>
+</html>
