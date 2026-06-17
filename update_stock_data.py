@@ -161,10 +161,14 @@ def update_html(data, stocks_data):
     update_date = now.strftime('%Y-%m-%d %H:%M')
     
     # 计算汇总数据
-    total_market_value = sum(s['price'] * s['shares'] for s in stocks_data.values())
+    now = datetime.now()
+    update_date = now.strftime('%Y-%m-%d %H:%M')
+    
+    # 计算总市值和总成本
+    total_market_value = sum(stocks_data[name]['price'] * STOCKS[name]['shares'] for name in STOCKS)
     total_cost = sum(STOCKS[name]['cost'] * STOCKS[name]['shares'] for name in STOCKS)
     total_pl = total_market_value - total_cost
-    total_pl_percent = (total_pl / total_cost) * 100
+    total_pl_percent = (total_pl / total_cost) * 100 if total_cost else 0
     
     # 构建 stocks 数组
     stocks_json = []
