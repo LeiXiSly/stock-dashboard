@@ -221,7 +221,7 @@ def update_html(data, stocks_data):
 }};"""
     
     # 替换旧数据
-    pattern = r'const portfolioData = \{[^}]+\};'
+    pattern = r'const portfolioData = \{[\s\S]*?\};'
     new_content = re.sub(pattern, new_portfolio, content, flags=re.DOTALL)
     
     with open(html_path, 'w', encoding='utf-8') as f:
