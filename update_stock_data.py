@@ -15,7 +15,7 @@ STOCKS = {
     '马应龙': {'code': 'sh600993', 'shares': 1000, 'cost': 24.60, 'alarmBuy': 23.00, 'alarmReduce': 25.50, 'alarmStop': 21.00, 'sector': '医药'},
     '普路通': {'code': 'sz002769', 'shares': 2500, 'cost': 8.83, 'alarmBuy': 7.00, 'alarmReduce': 9.50, 'alarmStop': 6.50, 'sector': '供应链'},
     '利欧股份': {'code': 'sz002131', 'shares': 5300, 'cost': 6.53, 'alarmBuy': 4.80, 'alarmReduce': 7.00, 'alarmStop': 4.50, 'sector': '机械/数字营销'},
-    '舒华体育': {'code': 'sh605299', 'shares': 7100, 'cost': 17.74, 'alarmBuy': 14.00, 'alarmReduce': 18.50, 'alarmStop': 13.00, 'sector': '体育健身'},
+    '舒华体育': {'code': 'sh605299', 'shares': 3600, 'cost': 17.74, 'alarmBuy': 14.00, 'alarmReduce': 18.50, 'alarmStop': 13.00, 'sector': '体育健身'},
     '比亚迪': {'code': 'sz002594', 'shares': 400, 'cost': 97.14, 'alarmBuy': 85.00, 'alarmReduce': 105.00, 'alarmStop': 80.00, 'sector': '新能源汽车'},
     '科大讯飞': {'code': 'sz002230', 'shares': 1400, 'cost': 65.41, 'alarmBuy': 35.00, 'alarmReduce': 55.00, 'alarmStop': 35.00, 'sector': 'AI/人工智能'}
 }
